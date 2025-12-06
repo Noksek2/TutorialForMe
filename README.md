@@ -1,3 +1,0 @@
-# TutorialForMe
-
-- Rust
