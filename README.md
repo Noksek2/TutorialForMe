@@ -994,11 +994,888 @@ pub fn notify<T: Summarizable + Display>(item: T) {
     println!("Breaking news! {}", item.summarize());
 }
 
+```rust
 // where 절 (더 읽기 쉬운 문법)
 fn some_function<T, U>(t: T, u: U) -> i32
 where
     T: Display + Clone,
     U: Clone + Debug,
 {
-    // ... 
+    // 함수 본체
+    0
+}
+```
+
+### 트레이트 객체
+```rust
+pub trait Summarizable {
+    fn summarize(&self) -> String;
+}
+
+// 트레이트 객체 사용
+pub fn notify(item: &dyn Summarizable) {
+    println!("Breaking news!  {}", item.summarize());
+}
+
+// Vec에 다양한 타입 저장
+let mut posts: Vec<Box<dyn Summarizable>> = vec! [];
+posts.push(Box::new(newsarticle));
+posts.push(Box::new(tweet));
+
+for post in posts. iter() {
+    println!("{}", post.summarize());
+}
+```
+
+### 고급 트레이트 기능
+
+#### 연관 타입
+```rust
+pub trait Iterator {
+    type Item;
+
+    fn next(&mut self) -> Option<Self::Item>;
+}
+
+impl Iterator for Counter {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // ... 
+    }
+}
+```
+
+#### 기본 제네릭 타입 파라미터
+```rust
+trait Add<RHS = Self> {
+    type Output;
+
+    fn add(self, rhs: RHS) -> Self::Output;
+}
+
+// 기본값을 사용
+impl Add for Point {
+    type Output = Point;
+
+    fn add(self, other: Point) -> Point {
+        Point {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+// 기본값을 오버라이드
+impl Add<Millimeters> for Meters {
+    type Output = Meters;
+
+    fn add(self, other: Millimeters) -> Meters {
+        Meters(self.0 + other.0 as f64 / 1000.0)
+    }
+}
+```
+
+#### 완전히 지정된 문법
+```rust
+trait Animal {
+    fn baby_name() -> String;
+}
+
+struct Dog;
+
+impl Dog {
+    fn baby_name() -> String {
+        String::from("Spot")
+    }
+}
+
+impl Animal for Dog {
+    fn baby_name() -> String {
+        String::from("puppy")
+    }
+}
+
+fn main() {
+    println! ("A baby dog is called a {}", Dog::baby_name());
+    // Dog의 baby_name() 호출 -> "Spot"
+
+    // Animal 트레이트의 baby_name() 호출
+    println!("A baby dog is called a {}", <Dog as Animal>::baby_name());
+    // -> "puppy"
+}
+```
+
+---
+
+## 모듈 및 크레이트
+
+### 모듈 시스템
+
+#### 모듈 정의
+```rust
+// src/lib.rs 또는 src/main.rs
+
+mod front_of_house {
+    mod hosting {
+        fn add_to_waitlist() {}
+        fn seat_at_table() {}
+    }
+
+    mod serving {
+        fn take_order() {}
+        fn serve_order() {}
+        fn take_payment() {}
+    }
+}
+```
+
+#### 모듈 트리
+```
+crate
+ └── front_of_house
+      ├── hosting
+      │   ├── add_to_waitlist
+      │   └── seat_at_table
+      └── serving
+          ├── take_order
+          ├── serve_order
+          └── take_payment
+```
+
+### 가시성 제어
+
+#### pub 키워드
+```rust
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+pub fn eat_at_restaurant() {
+    // 절대 경로
+    crate::front_of_house::hosting::add_to_waitlist();
+
+    // 상대 경로
+    front_of_house::hosting::add_to_waitlist();
+}
+```
+
+#### 개인 vs 공개
+```rust
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+        fn seat_at_table() {}  // 비공개
+    }
+}
+
+// hosting은 공개이지만 seat_at_table은 비공개
+// crate::front_of_house::hosting::seat_at_table();  // 오류!
+```
+
+### use 키워드
+
+#### 경로 가져오기
+```rust
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+use crate::front_of_house::hosting;
+// 또는
+use crate::front_of_house::hosting::add_to_waitlist;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    // 또는
+    add_to_waitlist();
+}
+```
+
+#### as로 별칭 지정
+```rust
+use std::fmt::Result;
+use std::io::Result as IoResult;
+
+fn function1() -> Result { /*.. .*/ }
+fn function2() -> IoResult<()> { /*...*/ }
+```
+
+#### pub use로 re-export
+```rust
+pub use crate::front_of_house::hosting;
+
+// 이제 사용자는 이렇게 사용 가능:
+// restaurant::hosting::add_to_waitlist();
+```
+
+#### 중첩 경로 사용
+```rust
+use std::io::{self, Write};
+use std::{cmp::Ordering, io};
+
+// 또는
+use std::io::{self, Write};
+```
+
+#### 글롭 연산자
+```rust
+use std::collections::*;
+// std::collections의 모든 공개 항목 가져오기
+```
+
+### 파일로 모듈 분리
+
+#### 프로젝트 구조
+```
+restaurant/
+├── Cargo.toml
+└── src/
+    ├── main.rs
+    ├── lib.rs
+    └── front_of_house/
+        ├── mod.rs
+        └── hosting. rs
+```
+
+#### src/lib.rs
+```rust
+pub mod front_of_house;
+
+pub use front_of_house::hosting;
+```
+
+#### src/front_of_house/mod.rs
+```rust
+pub mod hosting;
+```
+
+#### src/front_of_house/hosting.rs
+```rust
+pub fn add_to_waitlist() {}
+
+pub fn seat_at_table() {}
+```
+
+#### src/main.rs
+```rust
+use restaurant::hosting;
+
+fn main() {
+    hosting::add_to_waitlist();
+}
+```
+
+### 크레이트
+
+#### 바이너리 크레이트 vs 라이브러리 크레이트
+
+**바이너리 크레이트:**
+```
+src/main.rs  // 진입점
+```
+
+**라이브러리 크레이트:**
+```
+src/lib.rs   // 라이브러리 루트
+```
+
+**둘 다 있는 경우:**
+```
+src/
+├── main.rs      // 바이너리
+├── lib.rs       // 라이브러리
+└── bin/         // 추가 바이너리
+    ├── b1.rs
+    └── b2.rs
+```
+
+---
+
+## 생명주기 (Lifetime)
+
+### 생명주기란?
+생명주기는 참조가 유효한 스코프를 명시적으로 나타냅니다.
+
+### 함수에서의 생명주기
+```rust
+// 오류: 어느 참조가 반환되는지 명확하지 않음
+fn longest(x: &str, y: &str) -> &str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+
+// 생명주기 명시
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+
+fn main() {
+    let string1 = String::from("long string");
+    {
+        let string2 = String::from("xyz");
+        let result = longest(string1.as_str(), string2.as_str());
+        println!("The longest string is {}", result);
+    }
+}
+```
+
+### 구조체에서의 생명주기
+```rust
+struct ImportantExcerpt<'a> {
+    part: &'a str,
+}
+
+fn main() {
+    let novel = String::from("Call me Ishmael.  Some years ago.. .");
+    let first_sentence = novel.split('.').next().expect("Could not find a '.'");
+    let i = ImportantExcerpt {
+        part: first_sentence,
+    };
+}
+```
+
+### 생명주기 생략 규칙
+```rust
+// 규칙 1: 각 참조 파라미터가 고유한 생명주기를 가짐
+fn first_word<'a>(s: &'a str) -> &'a str { /*...*/ }
+
+// 규칙 2: 하나의 입력 생명주기가 있으면 출력 생명주기에 할당됨
+fn first_word(s: &str) -> &str { /*...*/ }
+
+// 규칙 3: 메서드에서 &self가 있으면 출력이 self의 생명주기를 받음
+impl<'a> ImportantExcerpt<'a> {
+    fn return_part(&self, announcement: &str) -> &str {
+        announcement
+    }
+}
+```
+
+### 정적 생명주기
+```rust
+let s: &'static str = "I have a static lifetime. ";
+
+fn longest<'a>(x: &'a str, y: &'static str) -> &'a str {
+    x
+}
+```
+
+---
+
+## 클로저 (Closure)
+
+### 기본 클로저
+```rust
+let expensive_closure = |num| {
+    println!("calculating slowly...");
+    thread::sleep(Duration::from_secs(2));
+    num
+};
+
+expensive_closure(5);
+```
+
+### 타입 주석과 반환 타입
+```rust
+let add_one_v2 = |x: u32| -> u32 { x + 1 };
+let add_one_v3 = |x| { x + 1 };
+let add_one_v4 = |x| x + 1;
+
+println!("{}", add_one_v2(5));
+```
+
+### 클로저와 소유권
+```rust
+let x = vec![1, 2, 3];
+
+// 소유권을 가져옴
+let equal_to_x = move |z| z == x;
+
+// println!("{:?}", x);  // 오류!  x는 클로저로 이동됨
+```
+
+### Fn 트레이트들
+```rust
+// Fn: 변하지 않는 빌려온 참조로 호출
+let x = vec![1, 2, 3];
+let print_vec = || println!("{:?}", x);
+print_vec();  // OK
+
+// FnMut: 가변 빌려온 참조로 호출
+let mut y = vec![1, 2, 3];
+let mut add_to_list = |v: i32| y.push(v);
+add_to_list(4);  // OK
+
+// FnOnce: 소유권을 가져와서 호출
+let z = vec![1, 2, 3];
+let consume_vec = move || drop(z);
+consume_vec();  // OK
+// consume_vec();  // 오류! 이미 호출됨
+```
+
+---
+
+## 스마트 포인터
+
+### Box<T>
+```rust
+// 힙에 값 저장
+let b = Box::new(5);
+println!("b = {}", b);
+
+// 재귀 타입 정의
+enum List {
+    Cons(i32, Box<List>),
+    Nil,
+}
+
+use List::{Cons, Nil};
+let list = Cons(1, Box::new(Cons(2, Box::new(Cons(3, Box::new(Nil))))));
+```
+
+### Deref 트레이트
+```rust
+use std::ops::Deref;
+
+struct MyBox<T>(T);
+
+impl<T> Deref for MyBox<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+fn main() {
+    let x = 5;
+    let y = MyBox::new(x);
+
+    assert_eq!(5, *y);
+}
+```
+
+### Rc<T> (참조 카운팅)
+```rust
+use std::rc::Rc;
+
+enum List {
+    Cons(i32, Rc<List>),
+    Nil,
+}
+
+use List::{Cons, Nil};
+
+fn main() {
+    let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Nil)))));
+    let b = Cons(3, Rc::clone(&a));
+    let c = Cons(4, Rc::clone(&a));
+}
+```
+
+### RefCell<T>와 내부 가변성
+```rust
+use std::cell::RefCell;
+
+struct MockMessenger {
+    sent_messages: RefCell<Vec<String>>,
+}
+
+impl MockMessenger {
+    fn send(&self, message: &str) {
+        self.sent_messages.borrow_mut(). push(String::from(message));
+    }
+}
+
+fn main() {
+    let mock = MockMessenger {
+        sent_messages: RefCell::new(vec![]),
+    };
+
+    mock.send("Hello");
+
+    assert_eq!(mock.sent_messages.borrow().len(), 1);
+}
+```
+
+---
+
+## 동시성
+
+### 스레드 생성
+```rust
+use std::thread;
+use std::time::Duration;
+
+fn main() {
+    let handle = thread::spawn(|| {
+        for i in 1..10 {
+            println!("hi number {} from spawned thread!", i);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });
+
+    for i in 1..5 {
+        println!("hi number {} from main thread!", i);
+        thread::sleep(Duration::from_millis(1));
+    }
+
+    handle.join(). unwrap();
+}
+```
+
+### 스레드와 소유권
+```rust
+use std::thread;
+
+fn main() {
+    let v = vec![1, 2, 3];
+
+    let handle = thread::spawn(move || {
+        println!("Here's a vector: {:?}", v);
+    });
+
+    handle. join().unwrap();
+}
+```
+
+### 메시지 전송 (MPSC)
+```rust
+use std::sync::mpsc;
+use std::thread;
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let val = String::from("hi");
+        tx.send(val).unwrap();
+    });
+
+    let received = rx.recv().unwrap();
+    println!("Got: {}", received);
+}
+```
+
+### 여러 생산자
+```rust
+use std::sync::mpsc;
+use std::thread;
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    let tx1 = tx.clone();
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ];
+
+        for val in vals {
+            tx1.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    for received in rx {
+        println!("Got: {}", received);
+    }
+}
+```
+
+### Mutex<T> (상호 배제)
+```rust
+use std::sync::Mutex;
+
+fn main() {
+    let m = Mutex::new(5);
+
+    {
+        let mut num = m.lock().unwrap();
+        *num = 6;
+    }
+
+    println! ("m = {:?}", m);
+}
+```
+
+### Arc<T> (원자적 참조 카운팅)
+```rust
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+fn main() {
+    let counter = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let counter = Arc::clone(&counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle. join().unwrap();
+    }
+
+    println!("Result: {}", *counter.lock(). unwrap());
+}
+```
+
+---
+
+## 패턴과 매칭 고급
+
+### 패턴의 다양한 사용
+```rust
+// if let
+let x = Some(5);
+if let Some(5) = x {
+    println!("five");
+}
+
+// while let
+let mut stack = vec![1, 2, 3];
+while let Some(top) = stack.pop() {
+    println!("{}", top);
+}
+
+// for 루프
+let v = vec! ['a', 'b', 'c'];
+for (index, value) in v.iter().enumerate() {
+    println!("{} is at index {}", value, index);
+}
+
+// let 문
+let (x, y, z) = (1, 2, 3);
+
+// 함수 파라미터
+fn print_coordinates(&(x, y): &(i32, i32)) {
+    println!("Current location: ({}, {})", x, y);
+}
+```
+
+### 반박할 수 없는 패턴
+```rust
+// OK: 반박할 수 없는 패턴
+let x = 5;
+
+// 오류: 반박 가능한 패턴
+// let Some(x) = some_option_value;
+
+// OK: if let으로 반박 가능한 패턴 처리
+if let Some(x) = some_option_value {
+    println!("{}", x);
+}
+```
+
+### 패턴 매칭 고급
+```rust
+match x {
+    1 | 2 => println!("one or two"),
+    3.. =5 => println!("three through five"),
+    Some(50) => println!("fifty"),
+    Some(n) if n % 2 == 0 => println!("matched even"),
+    _ => println!("something else"),
+}
+```
+
+---
+
+## 테스트
+
+### 기본 테스트
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn it_fails() {
+        panic!("Make this test fail");
+    }
+}
+```
+
+### 테스트 실행
+```bash
+cargo test               # 모든 테스트 실행
+cargo test test_name     # 특정 테스트만 실행
+cargo test -- --test-threads=1  # 단일 스레드로 실행
+cargo test -- --nocapture       # 출력 표시
+```
+
+### 다양한 어설션
+```rust
+#[test]
+fn it_works() {
+    assert!(true);
+    assert_eq!(2 + 2, 4);
+    assert_ne!(2 + 2, 5);
+}
+
+#[test]
+#[should_panic]
+fn it_panics() {
+    panic!("Oh no!");
+}
+
+#[test]
+#[should_panic(expected = "Guess value must be")]
+fn guess_too_small() {
+    panic!("Guess value must be less than 100");
+}
+```
+
+---
+
+## 실용적인 예제
+
+### 간단한 계산기
+```rust
+fn main() {
+    let nums = vec![1, 2, 3, 4, 5];
     
+    let sum: i32 = nums.iter(). sum();
+    let product: i32 = nums.iter().product();
+    let avg = sum as f64 / nums. len() as f64;
+    
+    println!("Sum: {}", sum);
+    println!("Product: {}", product);
+    println!("Average: {}", avg);
+}
+```
+
+### 커맨드라인 인자 처리
+```rust
+use std::env;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    
+    if args.len() < 2 {
+        eprintln! ("Usage: {} <query> <filename>", args[0]);
+        return;
+    }
+    
+    let query = &args[1];
+    let filename = &args[2];
+    
+    println!("Searching for '{}'", query);
+    println!("In file '{}'", filename);
+}
+```
+
+### 파일 읽기
+```rust
+use std::fs;
+
+fn main() {
+    let contents = fs::read_to_string("poem.txt")
+        .expect("Should have been able to read the file");
+    
+    println!("With text:\n{}", contents);
+}
+```
+
+### 간단한 웹 서버
+```rust
+use std::fs;
+use std::io::{prelude::*, BufReader};
+use std::net::{TcpListener, TcpStream};
+
+fn main() {
+    let listener = TcpListener::bind("127.0. 0.1:7878")
+        .expect("Failed to bind");
+    
+    for stream in listener.incoming() {
+        let stream = stream.expect("Connection failed");
+        handle_connection(stream);
+    }
+}
+
+fn handle_connection(mut stream: TcpStream) {
+    let buf_reader = BufReader::new(&mut stream);
+    let request_line = buf_reader.lines(). next().unwrap().unwrap();
+    
+    let response = "HTTP/1.1 200 OK\r\n\r\nHello World! ";
+    stream.write_all(response.as_bytes()).unwrap();
+}
+```
+
+---
+
+## 유용한 팁과 트릭
+
+### 타입 추론 강제하기
+```rust
+let v = Vec::new();  // 오류!  타입을 알 수 없음
+let v: Vec<i32> = Vec::new();  // OK
+let v = vec![1, 2, 3];  // 매크로로 OK
+```
+
+### 디버깅 프린트
+```rust
+#[derive(Debug)]
+struct Rectangle {
+    width: u32,
+    height: u32,
+}
+
+let rect = Rectangle { width: 30, height: 50 };
+println!("{:? }", rect);  // 한 줄 출력
+println!("{:#?}", rect);  // 예쁜 출력
+```
+
+### 파이프라인 연산
+```rust
+let number = Some(4);
+let number = number
+    .map(|x| x + 1)
+    .map(|x| x * 2)
+    .and_then(|x| Some(x));
+```
+
+### 함수형 스타일
+```rust
+let numbers = vec![1, 2, 3, 4, 5];
+
+let result: Vec<i32> = numbers
+    .iter()
+    .filter(|x| x % 2 == 0)
+    .map(|x| x * x)
+    .collect();
+
+println!("{:?}", result);  // [4, 16]
+```
+
+---
+
+## 참고 자료
+
+- [공식 Rust 문서](https://www.rust-lang.org)
+- [The Rust Programming Language (한국어)](https://rinthel.github.io/rust-lang-book-ko/)
+- [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
+- [Rust std lib 문서](https://doc.rust-lang.org/std/)
