@@ -1,0 +1,3 @@
+- 1 d2d init
+- 2 with d3d11
+- 3 else
