@@ -1,6 +1,7 @@
 
 # 🦎 Zig 언어 정리
 
+## Maybe It contains the wrong code, so please check it. (Created by copilot - Sonnet 4.6)
 ## 1. 기본 구조 & Hello World
 
 ```zig name=hello.zig
