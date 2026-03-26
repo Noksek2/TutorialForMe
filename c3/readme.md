@@ -1,3 +1,4 @@
+# C3 (v0.7.10)
 > C3은 C의 진화형 언어. C ABI 호환, 제로 오버헤드 추상화, 모던 문법이 특징.  
 > 공식 사이트: https://c3-lang.org | 컴파일러: `c3c`
 
@@ -69,11 +70,6 @@ fn void demo_types()
     iptr   f = 0;        // 포인터 크기 정수
 
     // 명시적 크기
-    int8   i8  = -128;
-    int16  i16 = 1000;
-    int32  i32 = 99999;
-    int64  i64 = 1_000_000_000;  // _ 구분자 가능
-    uint8  u8  = 255;
     uint128 big = 0;
 
     // 실수
@@ -86,10 +82,12 @@ fn void demo_types()
     // char (= uint8)
     char ch = 'A';
 
+
+    /* DOESN'T WORK
     // 타입 추론 (var)
     var auto_int = 10;       // int로 추론
     var auto_str = "hello";  // String으로 추론
-
+    */
     // 상수
     const int MAX = 100;
     const double PI = 3.14159;
@@ -122,7 +120,7 @@ fn void demo_strings()
 
     // ZString: C 호��� null-terminated 문자열
     ZString zs = "C compatible";
-
+    /* 
     // DString: 동적 가변 문자열 (힙 할당)
     DString ds = dstring::new("Hello");
     defer ds.free();         // 스코프 종료 시 자동 해제
@@ -147,6 +145,7 @@ fn void demo_strings()
     // 찾기 / 분리
     String upper = s.ascii_to_upper();
     defer upper.free();
+    */
 }
 ```
 
@@ -194,7 +193,7 @@ fn void demo_arrays()
 ```c3
 module pointer_demo;
 import std::io;
-import std::mem;
+import std::core::mem;
 
 fn void demo_pointers()
 {
@@ -636,7 +635,7 @@ fn void read_file(String path)
 
 ---
 
-## 13. 제네릭
+## 13. 제네릭 
 
 ```c3
 module generic_demo;
@@ -648,7 +647,7 @@ fn T max(T)(T a, T b) {
 }
 
 // 제네릭 구조체
-struct Pair(<A, B>) {
+struct Pair<A, B> {
     A first;
     B second;
 }
@@ -659,28 +658,28 @@ fn void Pair.print(<A, B>)(Pair(<A, B>)* self) {
 }
 
 // 제네릭 Stack 예시
-struct Stack(<T>) {
+struct Stack<T> {
     T[100] data;
     int top;
 }
 
-fn void Stack.push(<T>)(Stack(<T>)* self, T val) {
+fn void Stack.push(Stack* self, T val) {
     self.data[self.top++] = val;
 }
 
-fn T Stack.pop(<T>)(Stack(<T>)* self) {
+fn T Stack.pop(Stack* self) {
     return self.data[--self.top];
 }
 
-fn bool Stack.empty(<T>)(Stack(<T>)* self) {
+fn bool Stack.empty(Stack* self) {
     return self.top == 0;
 }
 
 fn void demo_generics() {
-    io::printfn("max(3,5) = %d", max(int)(3, 5));
-    io::printfn("max(1.2, 3.4) = %f", max(double)(1.2, 3.4));
+    io::printfn("max(3,5) = %d", max{int}(3, 5));
+    io::printfn("max(1.2, 3.4) = %f", max{double}(1.2, 3.4));
 
-    Stack(<int>) s;
+    Stack{int} s;
     s.top = 0;
     s.push(10);
     s.push(20);
