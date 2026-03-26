@@ -1,4 +1,6 @@
 # C3 (v0.7.10)
+
+## It contains the wrong code, so please check it. (Created by copilot - Sonnet 4.6)
 > C3은 C의 진화형 언어. C ABI 호환, 제로 오버헤드 추상화, 모던 문법이 특징.  
 > 공식 사이트: https://c3-lang.org | 컴파일러: `c3c`
 
